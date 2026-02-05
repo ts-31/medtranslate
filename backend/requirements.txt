@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+motor
+pydantic
+python-multipart
+google-genai
+python-dotenv
+aiofiles

@@ -1,0 +1,7 @@
+{
+  "name": "MedTranslate",
+  "description": "Real-time medical translation and consultation management platform featuring secure chat, automated summaries, and history tracking.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
