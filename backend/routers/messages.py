@@ -1,6 +1,6 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Response
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Response, Depends
 from fastapi.responses import StreamingResponse
-from database import db, fs
+from database import get_database, get_fs
 from models import MessageModel, CreateMessageRequest
 from services.gemini import gemini_service
 from bson import ObjectId
@@ -9,7 +9,7 @@ import io
 router = APIRouter()
 
 @router.post("/api/messages/text", response_model=MessageModel)
-async def send_text_message(request: CreateMessageRequest):
+async def send_text_message(request: CreateMessageRequest, db = Depends(get_database)):
     # Fetch conversation to know languages
     conversation = await db.conversations.find_one({"_id": ObjectId(request.conversation_id)})
     if not conversation:
@@ -36,7 +36,9 @@ async def send_text_message(request: CreateMessageRequest):
 async def send_audio_message(
     conversation_id: str = Form(...),
     sender_role: str = Form(...),
-    file: UploadFile = File(...)
+    file: UploadFile = File(...),
+    db = Depends(get_database),
+    fs = Depends(get_fs)
 ):
     try:
         # Upload to GridFS
@@ -67,7 +69,7 @@ async def send_audio_message(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/api/audio/{file_id}")
-async def stream_audio(file_id: str):
+async def stream_audio(file_id: str, fs = Depends(get_fs)):
     try:
         if not ObjectId.is_valid(file_id):
              raise HTTPException(status_code=400, detail="Invalid file ID")
@@ -82,7 +84,7 @@ async def stream_audio(file_id: str):
         raise HTTPException(status_code=404, detail="Audio file not found")
 
 @router.get("/api/search")
-async def search_messages(conversation_id: str, keyword: str):
+async def search_messages(conversation_id: str, keyword: str, db = Depends(get_database)):
     query = {
         "conversation_id": conversation_id,
         "$or": [

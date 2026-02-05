@@ -1,5 +1,5 @@
-from fastapi import APIRouter, HTTPException, Body
-from database import db
+from fastapi import APIRouter, HTTPException, Body, Depends
+from database import get_database
 from models import ConversationModel, CreateConversationRequest, MessageModel
 from services.gemini import gemini_service
 from typing import List
@@ -8,14 +8,14 @@ from bson import ObjectId
 router = APIRouter()
 
 @router.post("/api/conversations", response_model=ConversationModel)
-async def create_conversation(request: CreateConversationRequest):
+async def create_conversation(request: CreateConversationRequest, db = Depends(get_database)):
     conversation = request.dict()
     new_conversation = await db.conversations.insert_one(conversation)
     created_conversation = await db.conversations.find_one({"_id": new_conversation.inserted_id})
     return parse_json(created_conversation)
 
 @router.get("/api/conversations", response_model=List[dict])
-async def list_conversations():
+async def list_conversations(db = Depends(get_database)):
     conversations = await db.conversations.find().sort("created_at", -1).to_list(100)
     # Enrich with latest message snippet if needed, for simplicity just returning conversation data
     # In a real app we'd aggregate the last message.
@@ -34,12 +34,12 @@ async def list_conversations():
     return result
 
 @router.get("/api/conversations/{conversation_id}/messages", response_model=List[MessageModel])
-async def get_messages(conversation_id: str):
+async def get_messages(conversation_id: str, db = Depends(get_database)):
     messages = await db.messages.find({"conversation_id": conversation_id}).sort("created_at", 1).to_list(1000)
     return [parse_json(msg) for msg in messages]
 
 @router.post("/api/conversations/{conversation_id}/summary")
-async def generate_summary(conversation_id: str):
+async def generate_summary(conversation_id: str, db = Depends(get_database)):
     messages = await db.messages.find({"conversation_id": conversation_id}).sort("created_at", 1).to_list(1000)
     
     if not messages:
