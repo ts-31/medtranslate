@@ -8,12 +8,14 @@ load_dotenv()
 
 app = FastAPI(title="MedTranslate Backend")
 
+# Get frontend URL from environment variable, default to localhost if not set
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+
 # CORS configuration
 origins = [
-    "http://localhost:5173", # Vite default port
-    "http://127.0.0.1:5173",
-    "http://localhost:3000",
-    "*" # For simpler testing, restrict in production
+    FRONTEND_URL,
+    "http://127.0.0.1:5173",  # fallback local URLs
+    "http://localhost:3000",   # optional React default
 ]
 
 app.add_middleware(
